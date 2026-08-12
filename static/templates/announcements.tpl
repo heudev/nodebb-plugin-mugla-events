@@ -1,3 +1,4 @@
+{{{ if title }}}<h5 class="widget-title fw-semibold mb-2">{title}</h5>{{{ end }}}
 <ul class="msku-announcements list-unstyled mb-0">
 	{{{ each rows }}}
 	<li class="d-flex gap-2 align-items-baseline mb-2">

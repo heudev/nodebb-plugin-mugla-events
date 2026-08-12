@@ -152,7 +152,7 @@ plugin.renderEvents = async function (widget) {
 		showDistrictBadge: settings.showDistrictBadge,
 	});
 
-	widget.html = rows ? await renderTemplate('events', { rows }) : '';
+	widget.html = rows ? await renderTemplate('events', { rows, title: widget.data.title || '' }) : '';
 	return widget;
 };
 
@@ -165,6 +165,6 @@ plugin.renderAnnouncements = async function (widget) {
 		maxItems: settings.maxItems,
 	});
 
-	widget.html = rows ? await renderTemplate('announcements', { rows }) : '';
+	widget.html = rows ? await renderTemplate('announcements', { rows, title: widget.data.title || '' }) : '';
 	return widget;
 };
