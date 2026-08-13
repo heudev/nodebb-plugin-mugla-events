@@ -5,10 +5,13 @@ const assert = require('node:assert/strict');
 const { fetchPayload } = require('../lib/client.js');
 
 const VALID = {
-	generatedAt: '2026-08-12T14:00:00.000Z',
-	events: [],
+	generatedAt: '2026-08-13T09:00:00.000Z',
+	units: [
+		{ id: 'muhendislik', name: 'Mühendislik Fakültesi', kind: 'faculty' },
+		{ id: 'bilgisayar', name: 'Bilgisayar Mühendisliği', kind: 'dept', parent: 'muhendislik' },
+	],
 	announcements: [],
-	sourceStatus: { 'mugla.bel.tr': 'ok', 'bodrum.bel.tr': 'ok', 'mu.edu.tr': 'ok' },
+	sourceStatus: { muhendislik: 'ok', bilgisayar: 'ok' },
 };
 
 function fakeFetch(response) {
@@ -82,9 +85,9 @@ test('bozuk içerikli diziler reddedilir', async () => {
 	// Diziler doğru tipte ama içleri çöp. Tüketiciler alanları doğrudan
 	// okuduğu için bunun istemcide durdurulması gerekir.
 	const bad = [
-		{ ...VALID, events: [null] },
-		{ ...VALID, events: [{ id: 'mbb:1' }] },
-		{ ...VALID, announcements: ['metin'] },
+		{ ...VALID, units: [] },
+		{ ...VALID, announcements: [null] },
+		{ ...VALID, announcements: [{ id: 'mu:1', title: 'T', url: 'https://x/y' }] },
 		{ ...VALID, sourceStatus: [] },
 	];
 	for (const body of bad) {
@@ -99,15 +102,14 @@ test('bozuk içerikli diziler reddedilir', async () => {
 test('geçerli içerikli diziler kabul edilir', async () => {
 	const body = {
 		...VALID,
-		events: [{
-			id: 'mbb:1', title: 'E', type: null, startDate: '2026-08-20',
-			endDate: '2026-08-20', venue: null, district: null, url: 'https://x/1',
-		}],
-		announcements: [{ id: 'mu:1', title: 'D', publishedAt: null, url: 'https://x/2' }],
+		announcements: [
+			{ id: 'mu:1', title: 'D', publishedAt: '2026-08-13', url: 'https://muhendislik.mu.edu.tr/x', unit: 'muhendislik' },
+			{ id: 'mu:2', title: 'E', publishedAt: null, url: 'https://bilgisayar.mu.edu.tr/y', unit: 'bilgisayar' },
+		],
 	};
 	const payload = await fetchPayload({
 		url: 'https://x/y', token: 't', timeoutMs: 100, fetchImpl: fakeFetch(jsonResponse(body)),
 	});
-	assert.equal(payload.events.length, 1);
-	assert.equal(payload.announcements.length, 1);
+	assert.equal(payload.announcements.length, 2);
+	assert.equal(payload.units.length, 2);
 });

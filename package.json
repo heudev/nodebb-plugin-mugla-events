@@ -1,6 +1,6 @@
 {
   "name": "nodebb-plugin-mugla-events",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Muğla kampüsündeki fakülte ve bölüm duyurularını seçilebilir kenar çubuğu widget'ında gösterir",
   "main": "library.js",
   "nbbpm": {
