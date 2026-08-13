@@ -1,0 +1,144 @@
+/* MSKÜ Duyuruları widget'ı.
+ *
+ * Renk ve tipografi TEMADAN miras alınır — bu bileşen mevcut bir forumun
+ * kenar çubuğunda yaşıyor, kendi paletini dayatması yamalı durur. Ayırt
+ * edicilik yapıdan gelir: tarih artık başlıkla yarışan bir sütun değil,
+ * sessiz bir üst-satır; başlık tam genişliği alıyor.
+ *
+ * İmza öğesi TAZELİK: son 7 günün duyuruları vurgu noktası ve "Bugün/Dün"
+ * etiketi alır. Widget'ın asıl işi "yeni bir şey var mı?" sorusunu bir
+ * bakışta cevaplamak.
+ */
+
+.msku-announcements {
+	--msku-rule: var(--bs-border-color, rgba(128, 128, 128, 0.25));
+	--msku-muted: var(--bs-secondary-color, #6c757d);
+	--msku-accent: var(--bs-primary, #4b7a3f);
+}
+
+.msku-announcements__select {
+	font-size: 0.8125rem;
+}
+
+.msku-announcements__list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.msku-announcements__item + .msku-announcements__item {
+	border-top: 1px solid var(--msku-rule);
+}
+
+.msku-announcements__link {
+	display: block;
+	padding: 0.5rem 0.375rem 0.5rem 0.5rem;
+	margin-inline: -0.375rem;
+	border-radius: 0.375rem;
+	text-decoration: none;
+	color: inherit;
+	transition: background-color 0.12s ease;
+}
+
+.msku-announcements__link:hover,
+.msku-announcements__link:focus-visible {
+	background-color: color-mix(in srgb, var(--msku-accent) 8%, transparent);
+}
+
+.msku-announcements__link:focus-visible {
+	outline: 2px solid var(--msku-accent);
+	outline-offset: -2px;
+}
+
+/* Üst satır: tarih ve birim. Kasıtlı olarak küçük ve sessiz — başlığın
+   önüne geçmemeli, yalnızca bağlam vermeli. */
+.msku-announcements__meta {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	font-size: 0.6875rem;
+	font-weight: 500;
+	letter-spacing: 0.01em;
+	color: var(--msku-muted);
+	margin-bottom: 0.125rem;
+}
+
+.msku-announcements__date {
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.msku-announcements__unit {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	opacity: 0.85;
+}
+
+.msku-announcements__unit::before {
+	content: "·";
+	margin-right: 0.375rem;
+	opacity: 0.6;
+}
+
+/* Tazelik işareti: yalnızca son 7 günün duyurularında. */
+.msku-announcements__item--fresh .msku-announcements__date {
+	color: var(--msku-accent);
+}
+
+.msku-announcements__item--fresh .msku-announcements__meta::before {
+	content: "";
+	flex: 0 0 auto;
+	width: 0.3125rem;
+	height: 0.3125rem;
+	border-radius: 50%;
+	background-color: var(--msku-accent);
+}
+
+.msku-announcements__title {
+	font-size: 0.875rem;
+	line-height: 1.35;
+	font-weight: 500;
+	color: var(--bs-body-color, inherit);
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.msku-announcements__link:hover .msku-announcements__title {
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.msku-announcements__footer {
+	display: inline-block;
+	margin-top: 0.5rem;
+	font-size: 0.75rem;
+	color: var(--msku-muted);
+	text-decoration: none;
+}
+
+.msku-announcements__footer:hover {
+	color: var(--msku-accent);
+	text-decoration: underline;
+}
+
+.msku-announcements__empty {
+	font-size: 0.8125rem;
+	color: var(--msku-muted);
+	padding: 0.5rem 0;
+}
+
+/* Birim değiştirildiğinde satırlar sırayla belirir; filtrelemenin gerçekten
+   olduğunu hissettirir. Hareket tercihini kapatanlarda hiç oynatılmaz. */
+@media (prefers-reduced-motion: no-preference) {
+	.msku-announcements__item--enter {
+		animation: msku-fade-in 0.22s ease both;
+	}
+}
+
+@keyframes msku-fade-in {
+	from { opacity: 0; transform: translateY(3px); }
+	to { opacity: 1; transform: none; }
+}

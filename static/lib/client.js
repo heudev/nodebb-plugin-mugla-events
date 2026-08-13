@@ -5,8 +5,8 @@
 // ogrenci her girisinde kendi bolumunu gorur.
 //
 // Veri, sunucunun gomdugu <script type="application/json"> blogundan okunur.
-// Sunucu "Tumu" gorunumunu zaten HTML olarak basiyor; JS kapaliysa da widget
-// calisir, yalnizca secim yapilamaz.
+// Sunucu "Tum birimler" gorunumunu zaten HTML olarak basiyor; JS kapaliysa da
+// widget calisir, yalnizca secim yapilamaz.
 (function () {
 	const STORAGE_KEY = 'msku-announcements:unit';
 
@@ -36,27 +36,55 @@
 		}
 	}
 
-	function render(root, items, unitId, maxItems) {
+	// Bir birim secildiginde birim adini her satirda tekrarlamak gurultu olur;
+	// zaten acilir listede yaziyor.
+	function rowHtml(item, showUnit, animate, index) {
+		if (!isSafeUrl(item.url)) {
+			return '';
+		}
+		const classes = ['msku-announcements__item'];
+		if (item.fresh) {
+			classes.push('msku-announcements__item--fresh');
+		}
+		if (animate) {
+			classes.push('msku-announcements__item--enter');
+		}
+		const delay = animate ? ' style="animation-delay:' + (index * 45) + 'ms"' : '';
+		const unit = showUnit && item.unitName
+			? '<span class="msku-announcements__unit">' + escapeHtml(item.unitName) + '</span>'
+			: '';
+
+		return '<li class="' + classes.join(' ') + '"' + delay + '>' +
+			'<a class="msku-announcements__link" href="' + escapeHtml(item.url) + '" target="_blank" rel="noopener">' +
+			'<span class="msku-announcements__meta">' +
+			'<span class="msku-announcements__date">' + escapeHtml(item.dateLabel) + '</span>' +
+			unit +
+			'</span>' +
+			'<span class="msku-announcements__title">' + escapeHtml(item.title) + '</span>' +
+			'</a></li>';
+	}
+
+	function render(root, items, unitId, maxItems, animate) {
 		const list = root.querySelector('[data-msku-list]');
 		const empty = root.querySelector('[data-msku-empty]');
+		const more = root.querySelector('[data-msku-more]');
 		if (!list) {
 			return;
 		}
 
 		const filtered = (unitId ? items.filter(i => i.unit === unitId) : items).slice(0, maxItems);
-
-		list.innerHTML = filtered.map(function (item) {
-			if (!isSafeUrl(item.url)) {
-				return '';
-			}
-			return '<li class="d-flex gap-2 align-items-baseline mb-2">' +
-				'<span class="text-muted text-nowrap">' + escapeHtml(item.dateLabel) + '</span>' +
-				'<a href="' + escapeHtml(item.url) + '" target="_blank" rel="noopener" class="flex-grow-1 text-body">' +
-				escapeHtml(item.title) + '</a></li>';
+		list.innerHTML = filtered.map(function (item, i) {
+			return rowHtml(item, !unitId, animate, i);
 		}).join('');
 
 		if (empty) {
 			empty.classList.toggle('d-none', filtered.length > 0);
+		}
+		// "Tümünü gör" secili birimin kendi duyuru sayfasina gitsin.
+		if (more) {
+			more.href = unitId
+				? 'https://' + unitId + '.mu.edu.tr/tr/duyurular'
+				: 'https://www.mu.edu.tr/tr/duyurular';
 		}
 	}
 
@@ -81,11 +109,11 @@
 			saved = '';
 		}
 
-		// Kayitli birim artik listede yoksa (ornegin o birim coktuyse) "Tumu"ye
+		// Kayitli birim artik listede yoksa (o birim coktuyse) "Tüm birimler"e
 		// duseriz; aksi halde bos liste gosterirdik.
-		if (saved && select.querySelector('option[value="' + saved.replace(/"/g, '') + '"]')) {
+		if (saved && select.querySelector('option[value="' + saved.replace(/[^a-z0-9-]/gi, '') + '"]')) {
 			select.value = saved;
-			render(root, items, saved, maxItems);
+			render(root, items, saved, maxItems, false);
 		}
 
 		select.addEventListener('change', function () {
@@ -95,7 +123,7 @@
 			} catch (err) {
 				// depolama kapaliysa secim yalnizca bu sayfa icin gecerli olur
 			}
-			render(root, items, value, maxItems);
+			render(root, items, value, maxItems, true);
 		});
 	}
 

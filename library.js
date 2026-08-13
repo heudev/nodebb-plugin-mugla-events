@@ -35,6 +35,13 @@ function toNumber(value, fallback) {
 	return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+// `toISOString()` UTC tarihini verir; Türkiye sabit UTC+3 olduğu için her gece
+// 00:00-03:00 arasında "bugün" bir gün geride kalır ve dünkü duyuru "Bugün"
+// diye etiketlenirdi.
+function istanbulToday(date) {
+	return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul' }).format(date);
+}
+
 async function loadStore() {
 	if (memo.store && Date.now() - memo.at < MEMO_MS) {
 		return memo.store;
@@ -138,7 +145,12 @@ plugin.renderAnnouncements = async function (widget) {
 
 	const settings = await plugin.getSettings();
 	const store = await loadStore();
-	const data = buildWidget(store, { nowMs: Date.now(), maxItems: settings.maxItems });
+	const now = new Date();
+	const data = buildWidget(store, {
+		nowMs: now.getTime(),
+		today: istanbulToday(now),
+		maxItems: settings.maxItems,
+	});
 
 	if (!data) {
 		// Veri yoksa widget tamamen gizlenir; boş kutu gösterilmez.
