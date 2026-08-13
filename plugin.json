@@ -1,15 +1,15 @@
 {
   "id": "nodebb-plugin-mugla-events",
-  "name": "Muğla Events",
-  "description": "Muğla ve MSKÜ etkinlik/duyuru widget'ları",
+  "name": "MSKÜ Duyuruları",
+  "description": "Muğla kampüsündeki fakülte ve bölümlerin duyurularını seçilebilir bir kenar çubuğu widget'ında gösterir",
   "library": "./library.js",
   "hooks": [
     { "hook": "static:app.load", "method": "init" },
     { "hook": "filter:admin.header.build", "method": "addAdminNavigation" },
     { "hook": "filter:widgets.getWidgets", "method": "defineWidgets" },
-    { "hook": "filter:widget.render:muglaEvents", "method": "renderEvents" },
     { "hook": "filter:widget.render:mskuAnnouncements", "method": "renderAnnouncements" }
   ],
+  "scripts": ["static/lib/client.js"],
   "modules": {
     "../admin/plugins/mugla-events.js": "./static/lib/admin.js"
   },

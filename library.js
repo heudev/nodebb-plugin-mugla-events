@@ -10,22 +10,29 @@ const path = require('node:path');
 
 const { fetchPayload } = require('./lib/client.js');
 const { mergePayload, shouldAttemptRefresh, RETRY_COOLDOWN_MS } = require('./lib/store.js');
-const { buildEventRows, buildAnnouncementRows } = require('./lib/view.js');
+const { buildWidget } = require('./lib/view.js');
 
 const plugin = module.exports;
 
 const CACHE_KEY = 'mugla-events:cache';
 const MEMO_MS = 60 * 1000;
 
+const DEFAULTS = {
+	endpointUrl: '',
+	token: '',
+	refreshMinutes: 60,
+	maxItems: 5,
+};
+
 let memo = { at: 0, store: null };
 let refreshing = false;
 let lastAttemptAt = 0;
 
-// `toISOString()` UTC tarihini verir; Türkiye sabit UTC+3 olduğu için her gece
-// 00:00-03:00 arasında "bugün" bir gün geride kalır ve dün biten bir etkinlik
-// listenin başında dünkü tarihiyle görünür.
-function istanbulToday(date) {
-	return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul' }).format(date);
+// `parseInt(x, 10) || fallback` açıkça girilmiş 0 değerini yutar: maxItems=0
+// (widget'ı gizle) sessizce 5'e dönerdi.
+function toNumber(value, fallback) {
+	const parsed = parseInt(value, 10);
+	return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 async function loadStore() {
@@ -46,22 +53,22 @@ async function refreshInBackground() {
 	try {
 		const settings = await plugin.getSettings();
 		const store = await loadStore();
-		const shouldRefresh = shouldAttemptRefresh({
+		const should = shouldAttemptRefresh({
 			store,
 			nowMs: Date.now(),
 			refreshMs: settings.refreshMinutes * 60 * 1000,
 			lastAttemptAt,
 			cooldownMs: RETRY_COOLDOWN_MS,
 		});
-		if (!shouldRefresh) {
+		if (!should) {
 			return;
 		}
-		lastAttemptAt = Date.now();
 
+		lastAttemptAt = Date.now();
 		const payload = await fetchPayload({
 			url: settings.endpointUrl,
 			token: settings.token,
-			timeoutMs: 15000,
+			timeoutMs: 20000,
 		});
 		const merged = mergePayload(store, payload, Date.now());
 		await db.setObjectField(CACHE_KEY, 'store', JSON.stringify(merged));
@@ -79,37 +86,32 @@ async function renderTemplate(name, data) {
 	return benchpressjs.compileRender(source, data);
 }
 
-const DEFAULTS = {
-	endpointUrl: '',
-	token: '',
-	refreshMinutes: 60,
-	maxItems: 5,
-	showDistrictBadge: 'on',
-};
+// JSON, <script> bloğunun içine gömülüyor. `<` kaçırılmazsa gövdedeki bir
+// `</script>` bloğu erkenden kapatır ve kalan JSON sayfaya HTML olarak
+// düşer — kaynak içerik scraped olduğu için bu doğrudan XSS olurdu.
+function toEmbeddedJson(value) {
+	return JSON.stringify(value)
+		.replace(/</g, '\\u003c')
+		.replace(/\u2028/g, '\\u2028')
+		.replace(/\u2029/g, '\\u2029');
+}
 
 plugin.init = async function (params) {
-	const { router, middleware } = params;
+	const { router } = params;
 
 	routeHelpers.setupAdminPageRoute(router, '/admin/plugins/mugla-events', [], (req, res) => {
-		res.render('admin/plugins/mugla-events', { title: 'Muğla Events' });
+		res.render('admin/plugins/mugla-events', { title: 'MSKÜ Duyuruları' });
 	});
 };
 
 plugin.addAdminNavigation = async function (header) {
 	header.plugins.push({
 		route: '/plugins/mugla-events',
-		icon: 'fa-calendar',
-		name: 'Muğla Events',
+		icon: 'fa-bullhorn',
+		name: 'MSKÜ Duyuruları',
 	});
 	return header;
 };
-
-// `parseInt(x, 10) || fallback` açıkça girilmiş 0 değerini yutar: maxItems=0
-// (widget'ı gizle) sessizce 5'e dönerdi. Sayı geçerliyse ona saygı duyulur.
-function toNumber(value, fallback) {
-	const parsed = parseInt(value, 10);
-	return Number.isFinite(parsed) ? parsed : fallback;
-}
 
 plugin.getSettings = async function () {
 	const saved = await meta.settings.get('mugla-events');
@@ -118,53 +120,38 @@ plugin.getSettings = async function () {
 		token: saved.token || DEFAULTS.token,
 		refreshMinutes: toNumber(saved.refreshMinutes, DEFAULTS.refreshMinutes),
 		maxItems: toNumber(saved.maxItems, DEFAULTS.maxItems),
-		// NodeBB işaretsiz checkbox'ı açıkça 'off' olarak kaydeder
-		// (public/src/modules/settings.js:262), ilk açılışta ise anahtar hiç
-		// bulunmaz; `??` yalnızca o ilk durumda varsayılana düşer.
-		showDistrictBadge: (saved.showDistrictBadge ?? DEFAULTS.showDistrictBadge) === 'on',
 	};
 };
 
 plugin.defineWidgets = async function (widgets) {
 	widgets.push({
-		widget: 'muglaEvents',
-		name: 'Yaklaşan Etkinlikler',
-		description: 'Muğla ve Bodrum etkinlik takvimi',
-		content: '',
-	}, {
 		widget: 'mskuAnnouncements',
 		name: 'MSKÜ Duyuruları',
-		description: 'mu.edu.tr duyuru listesi',
+		description: 'Fakülte/bölüm seçilebilen duyuru listesi',
 		content: '',
 	});
 	return widgets;
 };
 
-plugin.renderEvents = async function (widget) {
-	refreshInBackground();
-	const settings = await plugin.getSettings();
-	const store = await loadStore();
-	const now = new Date();
-	const rows = buildEventRows(store, {
-		nowMs: now.getTime(),
-		today: istanbulToday(now),
-		maxItems: settings.maxItems,
-		showDistrictBadge: settings.showDistrictBadge,
-	});
-
-	widget.html = rows ? await renderTemplate('events', { rows, title: widget.data.title || '' }) : '';
-	return widget;
-};
-
 plugin.renderAnnouncements = async function (widget) {
 	refreshInBackground();
+
 	const settings = await plugin.getSettings();
 	const store = await loadStore();
-	const rows = buildAnnouncementRows(store, {
-		nowMs: Date.now(),
-		maxItems: settings.maxItems,
-	});
+	const data = buildWidget(store, { nowMs: Date.now(), maxItems: settings.maxItems });
 
-	widget.html = rows ? await renderTemplate('announcements', { rows, title: widget.data.title || '' }) : '';
+	if (!data) {
+		// Veri yoksa widget tamamen gizlenir; boş kutu gösterilmez.
+		widget.html = '';
+		return widget;
+	}
+
+	widget.html = await renderTemplate('announcements', {
+		title: widget.data.title || '',
+		groups: data.groups,
+		rows: data.rows,
+		maxItems: settings.maxItems,
+		itemsJson: toEmbeddedJson(data.items),
+	});
 	return widget;
 };

@@ -19,11 +19,7 @@
 					<label class="form-label" for="maxItems">Widget başına satır</label>
 					<input type="number" id="maxItems" name="maxItems" class="form-control" value="5" min="0" />
 				</div>
-				<div class="form-check mb-3">
-					<input type="checkbox" class="form-check-input" id="showDistrictBadge" name="showDistrictBadge" checked />
-					<label class="form-check-label" for="showDistrictBadge">Menteşe dışı ilçelerde rozet göster</label>
-				</div>
-			</form>
+				</form>
 			<button id="save" class="btn btn-primary">Kaydet</button>
 		</div>
 	</div>
