@@ -173,3 +173,18 @@ test('artık veri taşımayan birim seçiliyse Tümü\'ne düşer', () => {
 	assert.equal(data.rows.length, 1);
 	assert.equal(data.rows[0].unitName, 'Mühendislik Fakültesi');
 });
+
+test('yalnızca TEK seçenek işaretlenir', () => {
+	// Benchpress'te `{{{ if !selected }}}` beklendigi gibi calismiyordu ve HEM
+	// "Tüm birimler" HEM secili birim `selected` aliyordu. Tarayici sonuncuyu
+	// sectigi icin gorsel olarak dogru gorunuyordu ama kirilgandi.
+	const store = storeWith([ann(1, 'muhendislik', '2026-08-01'), ann(2, 'bilgisayar', '2026-08-02')]);
+
+	const withUnit = buildWidget(store, { ...OPTS, selectedUnit: 'bilgisayar' });
+	assert.equal(withUnit.allSelected, false);
+	assert.equal(withUnit.groups.flatMap(g => g.options).filter(o => o.selected).length, 1);
+
+	const withoutUnit = buildWidget(store, OPTS);
+	assert.equal(withoutUnit.allSelected, true);
+	assert.equal(withoutUnit.groups.flatMap(g => g.options).filter(o => o.selected).length, 0);
+});

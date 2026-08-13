@@ -1,7 +1,7 @@
 {{{ if title }}}<h5 class="widget-title fw-semibold mb-2">{title}</h5>{{{ end }}}
 <div class="msku-announcements" data-msku-widget data-msku-max="{maxItems}">
 	<select class="form-select form-select-sm mb-2 msku-announcements__select" data-msku-unit aria-label="Fakülte veya bölüm seç">
-		<option value=""{{{ if !selected }}} selected{{{ end }}}>Tüm birimler</option>
+		<option value=""{{{ if allSelected }}} selected{{{ end }}}>Tüm birimler</option>
 		{{{ each groups }}}
 		<optgroup label="{./label}">
 			{{{ each ./options }}}<option value="{./id}"{{{ if ./selected }}} selected{{{ end }}}>{./name}</option>{{{ end }}}
