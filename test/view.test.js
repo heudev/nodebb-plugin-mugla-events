@@ -125,3 +125,51 @@ test('tarihsiz duyurular sona düşer, girdi sırasından bağımsız', () => {
 	assert.deepEqual(ids([dated, undated, older]), ['Duyuru 1', 'Duyuru 2', 'Duyuru 3']);
 	assert.deepEqual(ids([undated, dated, older]), ['Duyuru 1', 'Duyuru 2', 'Duyuru 3']);
 });
+
+test('seçili birim SUNUCUDA uygulanır — istemciye iş kalmaz', () => {
+	// Sicramanin kok nedeni buydu: sunucu "Tüm birimler" basip istemci sonra
+	// degistiriyordu. Artik tercih cerezle sunucuya ulasiyor.
+	const data = buildWidget(storeWith([
+		ann(1, 'muhendislik', '2026-08-01'),
+		ann(2, 'bilgisayar', '2026-08-02'),
+		ann(3, 'bilgisayar', '2026-08-03'),
+	]), { ...OPTS, selectedUnit: 'bilgisayar' });
+
+	assert.equal(data.selected, 'bilgisayar');
+	assert.deepEqual(data.rows.map(r => r.title), ['Duyuru 3', 'Duyuru 2']);
+});
+
+test('seçili birimde satırlarda birim adı tekrarlanmaz', () => {
+	const data = buildWidget(storeWith([ann(1, 'bilgisayar', '2026-08-02')]), {
+		...OPTS, selectedUnit: 'bilgisayar',
+	});
+	assert.equal(data.rows[0].unitName, '');
+});
+
+test('items birim adını HER ZAMAN taşır (kullanıcı Tümü\'ne dönebilir)', () => {
+	const data = buildWidget(storeWith([
+		ann(1, 'muhendislik', '2026-08-01'),
+		ann(2, 'bilgisayar', '2026-08-02'),
+	]), { ...OPTS, selectedUnit: 'bilgisayar' });
+	assert.deepEqual(data.items.map(i => i.unitName).sort(), ['Bilgisayar Mühendisliği', 'Mühendislik Fakültesi']);
+});
+
+test('seçili birim açılır listede işaretlenir', () => {
+	const data = buildWidget(storeWith([
+		ann(1, 'muhendislik', '2026-08-01'),
+		ann(2, 'bilgisayar', '2026-08-02'),
+	]), { ...OPTS, selectedUnit: 'bilgisayar' });
+	const opts = data.groups.flatMap(g => g.options);
+	assert.equal(opts.find(o => o.id === 'bilgisayar').selected, true);
+	assert.equal(opts.find(o => o.id === 'muhendislik').selected, false);
+});
+
+test('artık veri taşımayan birim seçiliyse Tümü\'ne düşer', () => {
+	// O birimin sitesi coktuyse bos liste gostermek yerine hepsini goster.
+	const data = buildWidget(storeWith([ann(1, 'muhendislik', '2026-08-01')]), {
+		...OPTS, selectedUnit: 'yazilim',
+	});
+	assert.equal(data.selected, '');
+	assert.equal(data.rows.length, 1);
+	assert.equal(data.rows[0].unitName, 'Mühendislik Fakültesi');
+});

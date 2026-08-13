@@ -103,6 +103,13 @@ function toEmbeddedJson(value) {
 		.replace(/\u2029/g, '\\u2029');
 }
 
+// Tercih cerezde tutulur: sunucu daha ilk render'da dogru birimi basabilsin
+// diye. Deger yalnizca alt alan adi biciminde olabilir; baska her sey atilir.
+function readUnitCookie(req) {
+	const raw = req && req.cookies && req.cookies['msku-unit'];
+	return typeof raw === 'string' && /^[a-z0-9-]{1,40}$/.test(raw) ? raw : '';
+}
+
 plugin.init = async function (params) {
 	const { router } = params;
 
@@ -150,6 +157,7 @@ plugin.renderAnnouncements = async function (widget) {
 		nowMs: now.getTime(),
 		today: istanbulToday(now),
 		maxItems: settings.maxItems,
+		selectedUnit: readUnitCookie(widget.req),
 	});
 
 	if (!data) {

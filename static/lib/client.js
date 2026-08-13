@@ -1,14 +1,29 @@
 'use strict';
 
 // Widget'in istemci tarafi: acilir listeden fakulte/bolum secilince listeyi
-// ANINDA yeniden cizer — sunucuya gidilmez. Secim tarayicida saklanir, boylece
-// ogrenci her girisinde kendi bolumunu gorur.
+// ANINDA yeniden cizer — sunucuya gidilmez.
+//
+// Secim CEREZDE saklanir; sunucu cerezi okuyup ilk render'da zaten dogru
+// birimi basar, dolayisiyla sayfa acilisinda icerik sicramasi olmaz ve
+// JS kapaliyken de ogrenci kendi bolumunu gorur. Bu betigin isi yalnizca
+// yeniden yukleme olmadan degistirmeyi saglamak.
 //
 // Veri, sunucunun gomdugu <script type="application/json"> blogundan okunur.
-// Sunucu "Tum birimler" gorunumunu zaten HTML olarak basiyor; JS kapaliysa da
-// widget calisir, yalnizca secim yapilamaz.
 (function () {
-	const STORAGE_KEY = 'msku-announcements:unit';
+	// Tercih CEREZDE tutulur, localStorage'da degil: sunucu cerezi okuyup daha
+	// ilk render'da dogru birimi basiyor. localStorage ile once "Tüm birimler"
+	// basiliyor, sonra istemci listeyi degistiriyordu — gorunur bir sicrama.
+	const COOKIE = 'msku-unit';
+
+	function readCookie() {
+		const m = document.cookie.match(/(?:^|;\s*)msku-unit=([a-z0-9-]{1,40})(?:;|$)/);
+		return m ? m[1] : '';
+	}
+
+	function writeCookie(value) {
+		const safe = /^[a-z0-9-]{0,40}$/.test(value) ? value : '';
+		document.cookie = COOKIE + '=' + safe + ';path=/;max-age=31536000;samesite=lax';
+	}
 
 	function escapeHtml(value) {
 		return String(value == null ? '' : value)
@@ -102,27 +117,18 @@
 		const items = readItems(root);
 		const maxItems = parseInt(root.getAttribute('data-msku-max'), 10) || 5;
 
-		let saved = '';
-		try {
-			saved = window.localStorage.getItem(STORAGE_KEY) || '';
-		} catch (err) {
-			saved = '';
-		}
-
-		// Kayitli birim artik listede yoksa (o birim coktuyse) "Tüm birimler"e
-		// duseriz; aksi halde bos liste gosterirdik.
-		if (saved && select.querySelector('option[value="' + saved.replace(/[^a-z0-9-]/gi, '') + '"]')) {
-			select.value = saved;
-			render(root, items, saved, maxItems, false);
+		// Sunucu cerezi okuyup dogru birimi zaten bastigi icin ilk render'da
+		// hicbir sey yeniden cizilmez. Kayitli birim artik listede yoksa
+		// (o birim coktuyse) sunucu "Tüm birimler"e dusmus olur; cerezi de
+		// temizleyip tutarli kalalim.
+		const saved = readCookie();
+		if (saved && !select.querySelector('option[value="' + saved + '"]')) {
+			writeCookie('');
 		}
 
 		select.addEventListener('change', function () {
 			const value = select.value;
-			try {
-				window.localStorage.setItem(STORAGE_KEY, value);
-			} catch (err) {
-				// depolama kapaliysa secim yalnizca bu sayfa icin gecerli olur
-			}
+			writeCookie(value);
 			render(root, items, value, maxItems, true);
 		});
 	}

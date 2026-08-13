@@ -106,9 +106,15 @@
 	overflow: hidden;
 }
 
-.msku-announcements__link:hover .msku-announcements__title {
-	text-decoration: underline;
-	text-underline-offset: 2px;
+/* Tema `a:hover` kurali tum satiri (tarih, birim, baslik) altini ciziyordu.
+   Satirin tamami zaten tiklanabilir ve hover'da arka plan degisiyor; alt
+   cizgi gurultu. Tema kuralini yenmek icin bagli ogeler de kapsanir. */
+.msku-announcements__link,
+.msku-announcements__link:hover,
+.msku-announcements__link:focus,
+.msku-announcements__link:hover span,
+.msku-announcements__link:focus span {
+	text-decoration: none;
 }
 
 .msku-announcements__footer {
